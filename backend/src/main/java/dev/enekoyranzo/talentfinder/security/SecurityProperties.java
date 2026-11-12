@@ -14,6 +14,9 @@ import java.util.List;
 public record SecurityProperties(
         @NotBlank String jwtSecret,
         @Min(1) @Max(24) int accessTokenHours,
-        @NotEmpty List<String> allowedOrigins
+        @NotEmpty List<String> allowedOrigins,
+        boolean cookieSecure,
+        @Min(1) int loginMaxAttempts,
+        @Min(1) int loginLockMinutes
 ) {
 }
