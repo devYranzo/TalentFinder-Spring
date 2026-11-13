@@ -1,0 +1,35 @@
+// ============================================
+// Cristal reutilizable
+// Mixin (para usarlo dentro de otras reglas) + clases (para usarlo en el HTML).
+// Se ajusta con variables CSS, incluso por elemento:
+//   <div class="glass" style="--glass-blur: 30px">
+// ============================================
+:root {
+  --glass-bg: rgba(15, 23, 42, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-blur: 20px;
+  --glass-saturate: 160%;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+@mixin glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass {
+  @include glass;
+}
+
+// Variantes
+.glass-strong {
+  --glass-bg: rgba(15, 23, 42, 0.7);
+}
+
+.glass-subtle {
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-blur: 12px;
+}

@@ -1,0 +1,20 @@
+// ============================================
+// Isla: bloque flotante con esquinas redondeadas y margen en todos los lados.
+// Combínala con .glass:  <aside class="glass island">
+// ============================================
+:root {
+  --island-gap: 16px;
+  --island-radius: 1rem;
+}
+
+.island {
+  margin: var(--island-gap);
+  border-radius: var(--island-radius);
+  overflow: hidden;
+}
+
+// Variante más compacta
+.island-sm {
+  --island-gap: 10px;
+  --island-radius: 1rem;
+}
