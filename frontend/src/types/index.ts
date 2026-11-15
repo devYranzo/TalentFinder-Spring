@@ -1,10 +1,10 @@
-export type Role = 'admin' | 'recruiter' | 'viewer'
+export type Role = 'ADMIN' | 'RECRUITER';
 
 export interface Profile {
-    profile_id: number | null
-    first_name: string | null
-    last_name: string | null
-    role: Role
+    id: number | null
+    firstName: string | null
+    lastName: string | null
     email: string
-    is_active: boolean
+    role: Role
+    active: boolean
 }

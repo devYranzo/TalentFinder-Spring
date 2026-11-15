@@ -1,0 +1,11 @@
+// Utilidades propias, con el mismo estilo que las de Bootstrap (w-25, min-vh-100...)
+
+// Ancho del sidebar (250px) más el margen de la isla a cada lado
+.w-sidebar {
+  width: calc(250px + 2 * var(--island-gap));
+}
+
+// Evita que un hijo flex (tablas anchas, etc.) desborde el contenedor
+.min-w-0 {
+  min-width: 0;
+}
