@@ -44,7 +44,7 @@ onMounted(() => {
         ]"
       >
         <div class="input-group input-group-lg p-1">
-          <span class="input-group-text bg-transparent border-0 ps-4">
+          <span class="input-group-text bg-transparent border-0">
             <i class="bi bi-search text-white opacity-50" aria-hidden="true"></i>
           </span>
           <input
@@ -53,7 +53,7 @@ onMounted(() => {
               @keyup.enter="$emit('buscar')"
               type="text"
               class="form-control border-0 bg-transparent shadow-none ps-2"
-              :placeholder="isReady ? placeholder : 'Active el motor para buscar...'"
+              :placeholder="isReady ? placeholder : 'Búsquedas desactivas'"
               :disabled="!isReady || loading"
               aria-label="Buscar talento por habilidades"
           />
