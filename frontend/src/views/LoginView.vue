@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import {reactive, ref} from 'vue'
 import axios from 'axios'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import {useRoute, useRouter} from 'vue-router'
 
-import { getErrorMessage } from '@/api/errors'
-import { useAuthStore } from '@/stores/auth'
+import {getErrorMessage} from '@/api/errors'
+import {useAuthStore} from '@/stores/auth'
+import AuthLayout from "@/components/AuthLayout.vue";
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const email = ref('')
-const password = ref('')
+const form = reactive({
+  email: '',
+  password: '',
+});
+
 const loading = ref(false)
 const error = ref('')
 
@@ -24,14 +28,14 @@ function safeRedirect(): string {
   return '/search'
 }
 
-async function onSubmit() {
+async function handleLogin() {
   if (loading.value) return
 
   loading.value = true
   error.value = ''
 
   try {
-    await auth.login(email.value.trim(), password.value)
+    await auth.login(form.email.trim(), form.password.trim())
     await router.replace(safeRedirect())
   } catch (e) {
     error.value =
@@ -45,54 +49,66 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="min-vh-100 d-flex align-items-center justify-content-center p-3">
-    <!-- m-0 anula el margen de .island para que w-100 no se salga de la pantalla -->
-    <div class="glass island m-0 w-100 p-4 p-md-5" style="max-width: 420px">
-      <h1 class="h3 text-center fw-bold text-white mb-1">
-        <span class="text-primary">Talent</span> Finder
-      </h1>
-      <p class="text-center text-white-50 mb-4">Inicia sesión para continuar</p>
+  <AuthLayout title-primary="Talent" title-secondary="Finder" subtitle="Smarter hiring starts here">
+    <h1 class="text-white mb-4 fs-4">Bienvenido de nuevo</h1>
 
-      <div v-if="error" class="alert alert-danger py-2" role="alert">
-        {{ error }}
-      </div>
-
-      <form novalidate @submit.prevent="onSubmit">
-        <div class="mb-3">
-          <label for="email" class="form-label">Email</label>
+    <form @submit.prevent="handleLogin">
+      <div class="mb-3">
+        <label for="email" class="form-label small fw-bold">Correo electrónico</label>
+        <div class="input-group">
+          <span class="input-group-text border-end-0 bg-transparent">
+            <i class="bi bi-envelope text-muted" aria-hidden="true"></i>
+          </span>
           <input
-              id="email"
-              v-model="email"
               type="email"
-              class="form-control"
-              autocomplete="username"
+              class="form-control border-start-0 bg-transparent"
+              v-model="form.email"
+              id="email"
+              autocomplete="username email"
               required
               autofocus
           />
         </div>
+      </div>
 
-        <div class="mb-4">
-          <label for="password" class="form-label">Contraseña</label>
+      <div class="mb-4">
+        <label for="password" class="form-label small fw-bold">Contraseña</label>
+        <div class="input-group">
+          <span class="input-group-text border-end-0 bg-transparent">
+            <i class="bi bi-lock text-muted" aria-hidden="true"></i>
+          </span>
           <input
-              id="password"
-              v-model="password"
               type="password"
-              class="form-control"
+              v-model="form.password"
+              class="form-control border-start-0 bg-transparent"
+              id="password"
               autocomplete="current-password"
               required
           />
         </div>
+      </div>
 
-        <button type="submit" class="btn btn-primary w-100" :disabled="loading || !email || !password">
-          <span v-if="loading" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-          Entrar
+      <div class="d-grid">
+        <button
+            type="submit"
+            :disabled="loading"
+            class="btn btn-primary btn-lg"
+            :aria-busy="loading"
+        >
+          {{ loading ? 'Iniciando sesión...' : 'Iniciar sesión' }}
         </button>
-      </form>
+        <!--        <div class="d-block mt-3 text-primary small">-->
+        <!--          <span class="text-muted me-1">¿No tienes cuenta?</span>-->
+        <!--          <router-link to="/register" class="text-decoration-none">-->
+        <!--            <b>Regístrate aquí</b>-->
+        <!--          </router-link>-->
+        <!--        </div>-->
+      </div>
 
-      <p class="text-center text-white-50 small mt-4 mb-0">
-        ¿Tu empresa aún no está registrada?
-        <RouterLink :to="{ name: 'register' }">Crear cuenta</RouterLink>
-      </p>
-    </div>
-  </div>
+      <div v-if="error" class="alert alert-danger mt-3 mb-0" role="alert">
+        <i class="bi bi-exclamation-circle me-2" aria-hidden="true"></i>
+        <strong>Error:</strong> {{ error }}
+      </div>
+    </form>
+  </AuthLayout>
 </template>
