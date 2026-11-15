@@ -41,8 +41,11 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
                 .orElseThrow(() -> new BadCredentialsException("Token inválido"));
 
         // El token debe corresponder a la organización actual del usuario.
-        String orgClaim = String.valueOf(jwt.getClaim("org"));
-        if (!String.valueOf(user.getOrganizationId()).equals(orgClaim)) {
+        // OJO: se asigna a un Object antes de convertir. Pasar jwt.getClaim(...) directamente a
+        // String.valueOf(...) selecciona la sobrecarga char[] y lanza ClassCastException.
+        Object orgClaim = jwt.getClaim("org");
+        if (orgClaim == null
+                || !String.valueOf(user.getOrganizationId()).equals(String.valueOf(orgClaim))) {
             throw new BadCredentialsException("Token inválido");
         }
 
