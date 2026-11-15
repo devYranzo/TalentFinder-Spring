@@ -3,9 +3,10 @@
 SECRETS_DIR := secrets
 DB_SECRET   := $(SECRETS_DIR)/db_password.txt
 JWT_SECRET  := $(SECRETS_DIR)/jwt_secret.txt
+DEV_USER_SECRET := $(SECRETS_DIR)/dev_user_password.txt
 ENV_FILE    := .env
 
-.PHONY: help start stop restart status logs psql reset
+.PHONY: help start back stop restart status logs psql reset
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  make %-10s %s\n", $$1, $$2}'
@@ -25,11 +26,19 @@ $(JWT_SECRET):
 	@mkdir -p $(SECRETS_DIR)
 	@umask 077 && openssl rand -base64 48 | tr -d '\n' > $(JWT_SECRET)
 
+$(DEV_USER_SECRET):
+	@echo "Generando contraseña para usuarios de desarrollo..."
+	@mkdir -p $(SECRETS_DIR)
+	@umask 077 && openssl rand -base64 24 | tr -d '\n' > $(DEV_USER_SECRET)
+
 # ------------------------------------------------------------ Contenedores
-start: $(ENV_FILE) $(DB_SECRET) $(JWT_SECRET) ## Levanta los contenedores y espera a que esté lista
+start: $(ENV_FILE) $(DB_SECRET) $(JWT_SECRET) $(DEV_USER_SECRET) ## Prepara secretos y levanta la base de datos
 	docker compose up -d --wait
 	@echo ""
 	@echo "Base de datos lista en 127.0.0.1:5432"
+
+back: ## Arranca el backend con el perfil de desarrollo
+	cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
 stop: ## Para los contenedores (conserva los datos)
 	docker compose down

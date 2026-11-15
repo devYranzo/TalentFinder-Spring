@@ -59,7 +59,7 @@ Con Make:
 
 ```bash
 make start     # genera secretos si faltan, levanta la BD y espera a que esté sana
-make back      # arranca el backend
+make back      # arranca el backend con los usuarios de prueba
 make help      # lista todos los comandos
 ```
 
@@ -70,11 +70,17 @@ Sin Make:
    POSTGRES_DB=talentfinder
    POSTGRES_USER=talentfinder
    ```
-2. Crea `secrets/db_password.txt` (contraseña aleatoria) y `secrets/jwt_secret.txt`
-   (48 bytes aleatorios en Base64). **Sin salto de línea al final.**
+2. Crea `secrets/db_password.txt` (contraseña aleatoria), `secrets/jwt_secret.txt`
+   (48 bytes aleatorios en Base64) y `secrets/dev_user_password.txt` (contraseña de
+   al menos 12 caracteres para los usuarios de prueba). **Sin salto de línea al final.**
 3. `docker compose up -d --wait`
-4. `cd backend && ./mvnw spring-boot:run` (ejecútalo siempre desde `backend/`:
-   los secretos se leen de `../secrets/`).
+4. `make back`, o `cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`.
+   Los secretos se leen tanto desde la raíz como desde `backend/`.
+
+Con el perfil `dev` se crean `admin@talentfinder.test` y
+`recruiter@talentfinder.test`; ambos usan la contraseña de `secrets/dev_user_password.txt`.
+El perfil de desarrollo desactiva `Secure` en la cookie para permitir el login por HTTP
+en local. No actives ese perfil en producción.
 
 Comprobación: `GET http://localhost:8080/actuator/health` responde `200`.
 
