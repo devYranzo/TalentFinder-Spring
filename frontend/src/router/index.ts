@@ -33,13 +33,49 @@ const router = createRouter({
         {
           path: 'search',
           name: 'search',
-          component: () => import('@/views/PlaceholderView.vue'),
+          component: () => import('@/views/SearchView.vue'),
           meta: { title: 'Buscador' },
+        },
+        {
+          path: 'projects',
+          name: 'projects',
+          component: () => import('@/views/ProjectsView.vue'),
+          meta: { title: 'Proyectos', roles: ['ADMIN', 'RECRUITER'] },
+        },
+        {
+          path: 'files',
+          name: 'files',
+          component: () => import('@/views/FilesView.vue'),
+          meta: { title: 'Gestor de CVs', roles: ['ADMIN', 'RECRUITER'] },
+        },
+        {
+          path: 'analytics',
+          name: 'analytics',
+          component: () => import('@/views/AnalyticsView.vue'),
+          meta: { title: 'Analítica', roles: ['ADMIN', 'RECRUITER'] },
+        },
+        {
+          path: 'indexing',
+          name: 'indexing',
+          component: () => import('@/views/IndexingView.vue'),
+          meta: { title: 'Indexación', roles: ['ADMIN'] },
+        },
+        {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/views/UsersView.vue'),
+          meta: { title: 'Usuarios', roles: ['ADMIN'] },
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('@/views/SettingsView.vue'),
+          meta: { title: 'Ajustes de organización', roles: ['ADMIN'] },
         },
         {
           path: 'profile',
           name: 'profile',
-          component: () => import('@/views/PlaceholderView.vue'),
+          component: () => import('@/views/ProjectsView.vue'),
           meta: { title: 'Mi perfil' },
         },
         {
@@ -71,7 +107,7 @@ router.beforeEach(async (to) => {
 
   if (to.meta.public) {
     if (to.meta.guestOnly && auth.isAuthenticated) {
-      return { name: 'home' }
+      return { name: 'search' }
     }
     return true
   }
