@@ -116,7 +116,7 @@ async function onLogout() {
         <span class="fw-bold text-white"><span class="text-primary">Talent</span> Finder</span>
       </header>
 
-      <main class="p-3 p-lg-4">
+      <main class="flex-grow-1 d-flex flex-column min-vh-100">
         <RouterView/>
       </main>
     </div>

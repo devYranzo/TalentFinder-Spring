@@ -4,6 +4,7 @@ import {defineStore} from 'pinia'
 import {authApi} from '@/api/auth'
 import {queryClient} from '@/api/queryClient'
 import type {Profile, Role} from '@/types'
+import {useSearchStore} from "@/stores/search.ts";
 
 export const useAuthStore = defineStore('auth', () => {
     const profile = ref<Profile | null>(null)
@@ -40,11 +41,12 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    /** Limpia el estado local y la caché (multi-tenant: no dejar datos de otra organización). */
+    /** Limpia el estado local y la caché. */
     function clear() {
         profile.value = null
         loaded.value = true
         queryClient.clear()
+        useSearchStore().reset()
     }
 
     async function logout() {
