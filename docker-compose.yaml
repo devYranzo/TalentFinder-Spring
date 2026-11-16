@@ -42,9 +42,61 @@ services:
       timeout: 5s
       retries: 5
 
+  # Almacén de objetos compatible con S3 (CVs en PDF).
+  storage:
+    image: chrislusf/seaweedfs:latest
+    container_name: talentfinder-storage
+    restart: unless-stopped
+
+    command:
+      - "server"
+      - "-dir=/data"
+      - "-s3"
+      - "-s3.config=/run/secrets/seaweedfs_s3"
+      - "-master.volumeSizeLimitMB=1024"
+
+    secrets:
+      - seaweedfs_s3
+
+    ports:
+      - "127.0.0.1:8333:8333"
+
+    volumes:
+      - storagedata:/data
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+      - CHOWN
+    pids_limit: 300
+    mem_limit: 1g
+    cpus: 2.0
+
+  # Cliente de AWS CLI para administrar el almacén. No arranca con "up".
+  # Uso: docker compose --profile tools run --rm aws s3 ls
+  aws:
+    image: amazon/aws-cli
+    profiles: [ "tools" ]
+    entrypoint: [ "aws" ]
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://storage:8333
+    depends_on:
+      - storage
+
+
 secrets:
   db_password:
     file: ./secrets/db_password.txt
+  seaweedfs_s3:
+    file: ./secrets/seaweedfs_s3.json
 
 volumes:
   pgdata:
+  storagedata:
