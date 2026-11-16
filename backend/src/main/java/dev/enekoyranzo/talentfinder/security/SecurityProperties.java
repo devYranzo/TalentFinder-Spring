@@ -19,4 +19,13 @@ public record SecurityProperties(
         @Min(1) int loginMaxAttempts,
         @Min(1) int loginLockMinutes
 ) {
+
+    // Evita que el secreto de firma acabe en un log si alguien imprime este objeto.
+    @Override
+    public String toString() {
+        return "SecurityProperties[jwtSecret=***, accessTokenHours=" + accessTokenHours
+                + ", allowedOrigins=" + allowedOrigins + ", cookieSecure=" + cookieSecure
+                + ", loginMaxAttempts=" + loginMaxAttempts
+                + ", loginLockMinutes=" + loginLockMinutes + "]";
+    }
 }
