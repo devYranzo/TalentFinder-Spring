@@ -23,6 +23,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -53,10 +54,16 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        // Sin estado: por defecto, Spring invalida el token CSRF en cada petición
+                        // autenticada (pensado para sesiones con login) y borra la cookie XSRF-TOKEN.
+                        // Eso hacía fallar una de cada dos peticiones de escritura.
+                        .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy())
                         // Endpoints sin sesión previa: no hay credencial de cookie que abusar.
                         .ignoringRequestMatchers("/auth/login", "/auth/register-company"))
                 // Emite la cookie XSRF-TOKEN en cualquier respuesta (incluidas las 401).
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
+                // Copia la cookie de sesión a una cabecera Bearer DESPUÉS de CsrfFilter.
+                // No uses bearerTokenResolver(...) con la cookie: Spring desactivaría CSRF.
                 .addFilterBefore(new CookieBearerTokenFilter(), BearerTokenAuthenticationFilter.class)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(h -> h
@@ -65,6 +72,9 @@ public class SecurityConfig {
                         .frameOptions(f -> f.deny())
                         .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000)))
                 .authorizeHttpRequests(auth -> auth
+                        // El reenvío interno a /error (para fabricar la respuesta de un 403 o un 500) no
+                        // debe volver a pasar por la autenticación: la convertiría en un 401 engañoso.
+                        // Solo afecta a ese reenvío; /error no queda accesible directamente.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/login", "/auth/register-company").permitAll()
