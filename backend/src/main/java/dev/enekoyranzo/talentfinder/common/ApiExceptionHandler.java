@@ -1,5 +1,6 @@
 package dev.enekoyranzo.talentfinder.common;
 
+import dev.enekoyranzo.talentfinder.storage.StorageException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,6 +31,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail integrity(DataIntegrityViolationException ex) {
         log.warn("Violación de integridad de datos", ex);
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Conflicto con datos existentes.");
+    }
+
+    @ExceptionHandler(StorageException.class)
+    public ProblemDetail storage(StorageException ex) {
+        // El detalle ya se registró en S3CvStorage. Es un fallo temporal: el cliente puede reintentar.
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+                "El almacenamiento no está disponible. Inténtalo de nuevo en unos minutos.");
     }
 
     @ExceptionHandler(Exception.class)
