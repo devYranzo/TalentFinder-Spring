@@ -1,7 +1,7 @@
 package dev.enekoyranzo.talentfinder.security;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import jakarta.servlet.http.Cookie;
+import jakarta.servlet.DispatcherType;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,7 +21,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
-import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
@@ -47,7 +47,6 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http,
                                     JwtAuthConverter authConverter,
-                                    BearerTokenResolver cookieResolver,
                                     JwtDecoder jwtDecoder) throws Exception {
         http
                 .cors(Customizer.withDefaults())
@@ -58,6 +57,7 @@ public class SecurityConfig {
                         .ignoringRequestMatchers("/auth/login", "/auth/register-company"))
                 // Emite la cookie XSRF-TOKEN en cualquier respuesta (incluidas las 401).
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
+                .addFilterBefore(new CookieBearerTokenFilter(), BearerTokenAuthenticationFilter.class)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(h -> h
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'"))
@@ -65,13 +65,13 @@ public class SecurityConfig {
                         .frameOptions(f -> f.deny())
                         .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000)))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/login", "/auth/register-company").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").denyAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth
-                        .bearerTokenResolver(cookieResolver)
                         .jwt(jwt -> jwt
                                 .decoder(jwtDecoder)
                                 .jwtAuthenticationConverter(authConverter)));
@@ -92,23 +92,6 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cfg);
         return source;
-    }
-
-    // ------------------------------------------------------ Token en cookie
-    @Bean
-    BearerTokenResolver cookieBearerTokenResolver() {
-        return request -> {
-            Cookie[] cookies = request.getCookies();
-            if (cookies == null) {
-                return null;
-            }
-            for (Cookie c : cookies) {
-                if (ACCESS_COOKIE.equals(c.getName()) && c.getValue() != null && !c.getValue().isBlank()) {
-                    return c.getValue();
-                }
-            }
-            return null;
-        };
     }
 
     // ------------------------------------------------------------------- JWT
