@@ -44,7 +44,7 @@ services:
 
   # Almacén de objetos compatible con S3 (CVs en PDF).
   storage:
-    image: chrislusf/seaweedfs:latest
+    image: chrislusf/seaweedfs@sha256:e7d4b80af9bd49b2630a60ac6fbb7ffb620ac6a2c501f689c22a71b9f89f0203
     container_name: talentfinder-storage
     restart: unless-stopped
 
