@@ -77,7 +77,7 @@ async function onLogout() {
         :class="sidebarOpen ? 'd-flex' : 'd-none d-lg-flex'"
     >
       <div class="glass island flex-grow-1 d-flex flex-column">
-        <div class="fs-2 fw-bold text-white px-4 pt-4 pb-3">
+        <div class="fs-3 fw-bold text-white px-4 pt-4 pb-3">
           <span class="text-primary">Talent</span> Finder
         </div>
 

@@ -86,7 +86,7 @@ prepare-secrets: $(ENV_FILE) $(DB_SECRET) $(JWT_SECRET) $(DEV_USER_SECRET) $(STO
 
 # ---------------------------------------------------------------------- entorno
 start-dev: prepare-secrets
-	docker compose up -d --wait db storage
+	docker compose up -d --wait database storage
 	@echo "Esperando al almacén..."
 	@i=0; until $(AWS) s3 ls >/dev/null 2>&1; do i=$$((i+1)); [ $$i -ge 30 ] && { echo "El almacén no responde"; exit 1; }; sleep 2; done
 	@$(AWS) s3 ls s3://$(BUCKET) >/dev/null 2>&1 || $(AWS) s3 mb s3://$(BUCKET)
