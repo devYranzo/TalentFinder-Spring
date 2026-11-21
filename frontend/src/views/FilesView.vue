@@ -1,6 +1,7 @@
+
 <script setup>
-import {onMounted, onUnmounted, ref} from 'vue';
-import {useFileManager} from '@/composables/useFiles';
+import { onMounted, onUnmounted, ref } from 'vue';
+import { useFileManager } from '@/composables/useFiles';
 
 const {
   folderList,
@@ -18,6 +19,7 @@ const {
 } = useFileManager();
 
 // Navegación
+// null = Home
 const activeFolderId = ref(null);
 
 // Modal de subida
@@ -33,8 +35,7 @@ const statusMessage = ref('');
 const statusType = ref('success');
 let statusTimeout = null;
 
-// Documentos de la sección seleccionada
-const hoveredDocumentId = ref(null);
+// Documentos de la carpeta actual
 const displayedDocuments = () => {
   if (activeFolderId.value === null) {
     return generalDocuments.value;
@@ -43,10 +44,10 @@ const displayedDocuments = () => {
   return folderDocuments.value[activeFolderId.value] || [];
 };
 
-// Nombre de la carpeta seleccionada
+// Nombre de la carpeta actual
 const activeFolderName = () => {
   if (activeFolderId.value === null) {
-    return 'General';
+    return 'Home';
   }
 
   return folderList.value.find(
@@ -54,8 +55,13 @@ const activeFolderName = () => {
   )?.name || 'Carpeta';
 };
 
-// Seleccionar carpeta
-const selectFolder = (folderId) => {
+// Navegar a Home
+const goHome = () => {
+  activeFolderId.value = null;
+};
+
+// Abrir carpeta mediante doble clic
+const openFolder = (folderId) => {
   activeFolderId.value = folderId;
 };
 
@@ -90,6 +96,8 @@ const openUploadModal = () => {
 
 // Cerrar modal
 const closeUploadModal = () => {
+  if (isUploading.value) return;
+
   showUploadModal.value = false;
   resetUploadForm();
 };
@@ -98,8 +106,6 @@ const closeUploadModal = () => {
 const resetUploadForm = () => {
   selectedFile.value = null;
   selectedFolder.value = activeFolderId.value;
-  createFolderMode.value = false;
-  newFolderName.value = '';
 
   if (fileInput.value) {
     fileInput.value.value = '';
@@ -142,7 +148,8 @@ const handleUploadFile = async () => {
         selectedFolder.value
     );
 
-    closeUploadModal();
+    showUploadModal.value = false;
+    resetUploadForm();
 
     showStatus(`Archivo "${filename}" subido correctamente.`);
   } catch (error) {
@@ -164,9 +171,10 @@ const handleCreateFolder = async () => {
   }
 
   try {
-    const result = await createFolder(newFolderName.value);
+    const result = await createFolder(newFolderName.value.trim());
 
-    activeFolderId.value = result.id;
+    // Después de crearla, permanecemos en Home
+    activeFolderId.value = null;
 
     newFolderName.value = '';
     createFolderMode.value = false;
@@ -211,47 +219,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="container-fluid p-3 p-md-4">
+  <div class="container-fluid d-flex flex-column flex-grow-1 island mx-0 mb-0">
 
     <!-- CABECERA -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
       <div>
         <h1 class="h4 fw-bold mb-1">
           <i class="bi bi-folder2-open me-2"></i>
-          Gestión de documentos
+          Gestión de CVs
         </h1>
         <p class="text-secondary small mb-0">
           Organiza y consulta los currículums de tus candidatos.
         </p>
-      </div>
-
-      <div class="d-flex gap-2">
-        <button
-            :disabled="isLoading"
-            class="btn btn-outline-secondary"
-            title="Actualizar"
-            @click="handleRefresh"
-        >
-          <span
-              v-if="isLoading"
-              class="spinner-border spinner-border-sm"
-          ></span>
-          <i v-else class="bi bi-arrow-clockwise"></i>
-        </button>
-        <button
-            class="btn btn-outline-primary"
-            @click="toggleCreateFolderMode"
-        >
-          <i class="bi bi-folder-plus me-1"></i>
-          Nueva carpeta
-        </button>
-        <button
-            class="btn btn-primary"
-            @click="openUploadModal"
-        >
-          <i class="bi bi-cloud-arrow-up me-1"></i>
-          Subir archivo
-        </button>
       </div>
     </div>
 
@@ -295,6 +274,7 @@ onUnmounted(() => {
                 type="text"
             />
           </div>
+
           <div class="col-auto">
             <button
                 :disabled="isCreatingFolder"
@@ -305,10 +285,12 @@ onUnmounted(() => {
                   v-if="isCreatingFolder"
                   class="spinner-border spinner-border-sm me-1"
               ></span>
+
               <i v-else class="bi bi-check-lg me-1"></i>
               Crear
             </button>
           </div>
+
           <div class="col-auto">
             <button
                 :disabled="isCreatingFolder"
@@ -323,201 +305,345 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- SECCIÓN CARPETAS -->
-    <section class="mb-4">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h6 fw-bold mb-0">
-          <i class="bi bi-folder me-2"></i>
-          Carpetas
-        </h2>
-        <span class="badge text-bg-secondary">
-          {{ folderList.length }} carpetas
-        </span>
-      </div>
+    <!-- ACCIONES -->
+    <div class="d-flex gap-2 mb-3">
+      <button
+          :disabled="isLoading"
+          class="btn btn-outline-secondary"
+          title="Actualizar"
+          type="button"
+          @click="handleRefresh"
+      >
+        <span
+            v-if="isLoading"
+            class="spinner-border spinner-border-sm"
+        ></span>
 
-      <!-- Botones de carpetas -->
-      <div class="d-flex flex-wrap gap-2">
-        <!-- GENERAL -->
-        <button
-            :class="activeFolderId === null
-            ? 'btn-primary'
-            : 'btn-outline-secondary'"
-            class="btn d-flex align-items-center gap-2"
-            type="button"
-            @click="selectFolder(null)"
-        >
-          <i class="bi bi-folder2-open"></i>
-          General
-          <span
-              :class="activeFolderId === null
-              ? 'text-bg-light text-primary'
-              : 'text-bg-secondary'"
-              class="badge"
+        <i v-else class="bi bi-arrow-clockwise"></i>
+      </button>
+
+      <button
+          v-if="activeFolderId === null"
+          class="btn btn-outline-primary"
+          type="button"
+          @click="toggleCreateFolderMode"
+      >
+        <i class="bi bi-folder-plus me-1"></i>
+        Nueva carpeta
+      </button>
+
+      <button
+          class="btn btn-primary"
+          type="button"
+          @click="openUploadModal"
+      >
+        <i class="bi bi-cloud-arrow-up me-1"></i>
+        Subir archivo
+      </button>
+    </div>
+
+    <!-- CARGANDO -->
+    <div
+        v-if="isLoading"
+        class="text-center py-5"
+    >
+      <div class="spinner-border text-primary"></div>
+
+      <p class="text-secondary mt-3 mb-0">
+        Cargando documentos...
+      </p>
+    </div>
+
+    <!-- EXPLORADOR: UN ÚNICO CONTENEDOR -->
+    <div
+        class="island p-3 ps-0 ms-0 flex-grow-1"
+    >
+      <!-- BREADCRUMB -->
+      <nav aria-label="breadcrumb" class=" mb-3 fs-5">
+        <ol class="breadcrumb mb-0">
+          <li
+              class="breadcrumb-item"
+              :class="{ active: activeFolderId === null }"
           >
-            {{ generalDocuments.length }}
-          </span>
-        </button>
+            <a href="#" class=" text-white text-decoration-none" @click="goHome()">
+              <i class="bi bi-house-door" />
+              Inicio
+            </a>
+          </li>
+
+          <li
+              v-if="activeFolderId !== null"
+              aria-current="page"
+              class="breadcrumb-item active"
+          >
+            {{ activeFolderName() }}
+          </li>
+        </ol>
+      </nav>
+
+      <!-- HOME -->
+      <template v-if="activeFolderId === null">
 
         <!-- CARPETAS -->
-        <button
-            v-for="folder in folderList"
-            :key="folder.id"
-            :class="activeFolderId === folder.id
-            ? 'btn-primary'
-            : 'btn-outline-secondary'"
-            class="btn d-flex align-items-center gap-2"
-            type="button"
-            @click="selectFolder(folder.id)"
-        >
-          <i class="bi bi-folder-fill"></i>
-          {{ folder.name }}
-          <span
-              :class="activeFolderId === folder.id
-              ? 'text-bg-light text-primary'
-              : 'text-bg-secondary'"
-              class="badge"
-          >
-            {{ folder.documentCount }}
-          </span>
-        </button>
-      </div>
-    </section>
+        <section class="mb-4">
 
-    <hr class="my-4">
-
-    <!-- SECCIÓN DOCUMENTOS -->
-    <section>
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-          <h2 class="h5 fw-bold mb-1">
-            <i class="bi bi-file-earmark-pdf me-2"></i>
-            {{ activeFolderName() }}
-          </h2>
-          <span class="text-secondary small">
-            {{ displayedDocuments().length }} documentos
-          </span>
-        </div>
-
-        <button
-            class="btn btn-sm btn-outline-primary"
-            @click="openUploadModal"
-        >
-          <i class="bi bi-plus-lg me-1"></i>
-          Añadir documento
-        </button>
-      </div>
-
-      <!-- CARGANDO -->
-      <div
-          v-if="isLoading"
-          class="text-center py-5"
-      >
-        <div class="spinner-border text-primary"></div>
-
-        <p class="text-secondary mt-3 mb-0">
-          Cargando documentos...
-        </p>
-      </div>
-
-
-      <!-- DOCUMENTOS -->
-      <div
-          v-else-if="displayedDocuments().length > 0"
-          class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-3"
-      >
-        <div
-            v-for="document in displayedDocuments()"
-            :key="document.id"
-            class="col"
-        >
+          <!-- GRID DE CARPETAS -->
           <div
-              class="card h-100 shadow-sm glass position-relative overflow-hidden"
-              @mouseenter="hoveredDocumentId = document.id"
-              @mouseleave="hoveredDocumentId = null"
+              v-if="folderList.length > 0"
+              class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-3"
           >
-
-            <!-- VISTA PREVIA -->
-            <button
-                type="button"
-                class="card-body border-0 bg-transparent d-flex flex-column align-items-center justify-content-center p-4"
-                @click="handleOpenPDF(document)"
-                :aria-label="'Ver documento ' + document.filename"
+            <div
+                v-for="folder in folderList"
+                :key="folder.id"
+                class="col"
             >
-              <i class="bi bi-file-earmark-pdf-fill text-danger display-3"></i>
-<!--              <span class="text-secondary small mt-2">-->
-<!--                {{ formatSize(document.sizeBytes) }}-->
-<!--              </span>-->
+              <button
+                  type="button"
+                  class="card h-100 w-100 bg-transparent text-start"
+                  @click.stop
+                  @dblclick="openFolder(folder.id)"
+                  @keydown.enter="openFolder(folder.id)"
+                  :aria-label="'Abrir carpeta ' + folder.name"
+                  title="Haz doble clic para abrir"
+              >
+                <div class="card-body d-flex align-items-center">
+                  <i class="bi bi-folder-fill text-warning"></i>
+
+                  <span class="fw-semibold ms-2 text-truncate">
+                    {{ folder.name }}
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- SIN CARPETAS -->
+          <div
+              v-else
+              class="text-center text-secondary py-5"
+          >
+            <i class="bi bi-folder2-open display-3"></i>
+
+            <h3 class="h6 fw-bold mt-3">
+              No hay carpetas
+            </h3>
+
+            <p class="small">
+              Crea una carpeta para organizar tus documentos.
+            </p>
+
+            <button
+                class="btn btn-outline-primary btn-sm"
+                type="button"
+                @click="toggleCreateFolderMode"
+            >
+              <i class="bi bi-folder-plus me-1"></i>
+              Crear primera carpeta
+            </button>
+          </div>
+        </section>
+
+        <!-- DOCUMENTOS GENERALES -->
+        <section>
+
+          <!-- DOCUMENTOS -->
+          <div
+              v-if="generalDocuments.length > 0"
+              class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-3"
+          >
+            <div
+                v-for="document in generalDocuments"
+                :key="document.id"
+                class="col"
+            >
+              <div class="card h-100 shadow-sm bg-transparent overflow-hidden">
+
+                <!-- VISTA PREVIA -->
+                <button
+                    type="button"
+                    class="card-body border-0 bg-transparent d-flex flex-column align-items-center justify-content-center p-4"
+                    @click="handleOpenPDF(document)"
+                    :aria-label="'Ver documento ' + document.filename"
+                >
+                  <i class="bi bi-file-earmark-pdf-fill text-danger display-3"></i>
                 </button>
-                <!-- FOOTER DEL DOCUMENTO -->
+
+                <!-- FOOTER -->
                 <div class="card-footer bg-transparent border-top d-flex align-items-center gap-2 py-2 px-2">
-                  <!-- NOMBRE -->
                   <span
                       class="small fw-semibold text-truncate flex-grow-1"
                       :title="document.filename"
                   >
-                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i>
+                    <i class="bi bi-file-earmark-pdf-fill text-danger me-1"></i>
                     {{ document.filename }}
                   </span>
 
-              <!-- MENÚ DE OPCIONES -->
-              <div class="dropdown flex-shrink-0">
-                <button
-                    type="button"
-                    class="btn btn-sm bg-transparent border-0"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                    :aria-label="'Opciones de ' + document.filename"
-                    @click.stop
-                >
-                  <i class="bi bi-three-dots-vertical"></i>
-                </button>
-
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                  <li>
+                  <div class="dropdown flex-shrink-0">
                     <button
-                        class="dropdown-item"
                         type="button"
-                        @click="handleOpenPDF(document)"
+                        class="btn btn-sm bg-transparent border-0"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        :aria-label="'Opciones de ' + document.filename"
+                        @click.stop
                     >
-                      <i class="bi bi-eye me-2"></i>
-                      Ver documento
+                      <i class="bi bi-three-dots-vertical"></i>
                     </button>
-                  </li>
-                  <!-- Aquí añadiremos próximamente:
-                       Cambiar nombre
-                       Mover a carpeta
-                       Eliminar
-                  -->
-                </ul>
+
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                      <li>
+                        <button
+                            class="dropdown-item"
+                            type="button"
+                            @click="handleOpenPDF(document)"
+                        >
+                          <i class="bi bi-eye me-2"></i>
+                          Ver documento
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- ESTADO VACÍO -->
-      <div
-          v-else
-          class="card border-0 bg-transparent text-center py-5"
-      >
-        <div class="card-body">
-          <i class="bi bi-folder2-open display-3 text-secondary"></i>
-          <h3 class="h6 fw-bold mt-3">
-            No hay documentos
-          </h3>
-          <p class="text-secondary small">
-            Esta sección todavía no contiene documentos.
-          </p>
-          <button
-              class="btn btn-primary btn-sm"
-              @click="openUploadModal"
+          <!-- SIN DOCUMENTOS GENERALES -->
+          <div
+              v-else
+              class="text-center text-secondary py-4"
           >
-            <i class="bi bi-cloud-arrow-up me-1"></i>
-            Subir primer documento
-          </button>
-        </div>
-      </div>
-    </section>
+            <i class="bi bi-file-earmark display-4"></i>
+
+            <p class="small mb-0 mt-2">
+              No hay documentos generales.
+            </p>
+          </div>
+        </section>
+
+      </template>
+
+      <!-- CONTENIDO DE UNA CARPETA -->
+      <template v-else>
+
+        <section>
+
+          <!-- CABECERA DE CARPETA -->
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+            <div>
+              <h2 class="h5 fw-bold mb-1">
+                <i class="bi bi-folder-fill text-warning me-2"></i>
+                {{ activeFolderName() }}
+              </h2>
+
+              <span class="text-secondary small">
+                {{ displayedDocuments().length }}
+                {{ displayedDocuments().length === 1 ? 'documento' : 'documentos' }}
+              </span>
+            </div>
+
+            <button
+                class="btn btn-sm btn-outline-primary"
+                type="button"
+                @click="openUploadModal"
+            >
+              <i class="bi bi-plus-lg me-1"></i>
+              Añadir documento
+            </button>
+          </div>
+
+          <!-- DOCUMENTOS DE LA CARPETA -->
+          <div
+              v-if="displayedDocuments().length > 0"
+              class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-3"
+          >
+            <div
+                v-for="document in displayedDocuments()"
+                :key="document.id"
+                class="col"
+            >
+              <div class="card h-100 shadow-sm glass overflow-hidden">
+
+                <!-- VISTA PREVIA -->
+                <button
+                    type="button"
+                    class="card-body border-0 bg-transparent d-flex flex-column align-items-center justify-content-center p-4"
+                    @click="handleOpenPDF(document)"
+                    :aria-label="'Ver documento ' + document.filename"
+                >
+                  <i class="bi bi-file-earmark-pdf-fill text-danger display-3"></i>
+                </button>
+
+                <!-- FOOTER -->
+                <div class="card-footer bg-transparent border-top d-flex align-items-center gap-2 py-2 px-2">
+                  <span
+                      class="small fw-semibold text-truncate flex-grow-1"
+                      :title="document.filename"
+                  >
+                    <i class="bi bi-file-earmark-pdf-fill text-danger me-1"></i>
+                    {{ document.filename }}
+                  </span>
+
+                  <div class="dropdown flex-shrink-0">
+                    <button
+                        type="button"
+                        class="btn btn-sm bg-transparent border-0"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        :aria-label="'Opciones de ' + document.filename"
+                        @click.stop
+                    >
+                      <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                      <li>
+                        <button
+                            class="dropdown-item"
+                            type="button"
+                            @click="handleOpenPDF(document)"
+                        >
+                          <i class="bi bi-eye me-2"></i>
+                          Ver documento
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARPETA VACÍA -->
+          <div
+              v-else
+              class="card border-0 bg-transparent text-center py-5"
+          >
+            <div class="card-body">
+              <i class="bi bi-folder2-open display-3 text-secondary"></i>
+
+              <h3 class="h6 fw-bold mt-3">
+                Esta carpeta está vacía
+              </h3>
+
+              <p class="text-secondary small">
+                Todavía no contiene documentos.
+              </p>
+
+              <button
+                  class="btn btn-primary btn-sm"
+                  type="button"
+                  @click="openUploadModal"
+              >
+                <i class="bi bi-cloud-arrow-up me-1"></i>
+                Subir primer documento
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </template>
+    </div>
 
     <!-- MODAL SUBIDA -->
     <div
@@ -531,12 +657,14 @@ onUnmounted(() => {
     >
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
+
           <!-- CABECERA -->
           <div class="modal-header">
             <h5 id="uploadModalTitle" class="modal-title fw-semibold">
               <i class="bi bi-cloud-arrow-up me-2 text-primary"></i>
               Subir documento
             </h5>
+
             <button
                 :disabled="isUploading || isCreatingFolder"
                 class="btn-close"
@@ -547,11 +675,13 @@ onUnmounted(() => {
 
           <!-- CUERPO -->
           <div class="modal-body">
+
             <!-- CARPETA DESTINO -->
             <div class="mb-3">
               <label class="form-label fw-semibold">
                 Carpeta de destino
               </label>
+
               <select
                   v-model="selectedFolder"
                   :disabled="isUploading"
@@ -560,6 +690,7 @@ onUnmounted(() => {
                 <option :value="null">
                   General
                 </option>
+
                 <option
                     v-for="folder in folderList"
                     :key="folder.id"
@@ -575,6 +706,7 @@ onUnmounted(() => {
               <label class="form-label fw-semibold">
                 Archivo PDF
               </label>
+
               <input
                   ref="fileInput"
                   :disabled="isUploading"
@@ -595,10 +727,12 @@ onUnmounted(() => {
                 class="alert alert-info d-flex align-items-center gap-3 mb-0"
             >
               <i class="bi bi-file-earmark-pdf-fill fs-3 text-danger"></i>
+
               <div class="overflow-hidden">
                 <div class="fw-semibold text-truncate">
                   {{ selectedFile.name }}
                 </div>
+
                 <small>
                   {{ formatSize(selectedFile.size) }}
                 </small>
@@ -616,6 +750,7 @@ onUnmounted(() => {
             >
               Cancelar
             </button>
+
             <button
                 :disabled="!selectedFile || isUploading || isCreatingFolder"
                 class="btn btn-primary"
@@ -626,12 +761,16 @@ onUnmounted(() => {
                   v-if="isUploading"
                   class="spinner-border spinner-border-sm me-2"
               ></span>
+
               <i v-else class="bi bi-upload me-1"></i>
+
               {{ isUploading ? 'Subiendo...' : 'Subir documento' }}
             </button>
           </div>
+
         </div>
       </div>
     </div>
+
   </div>
 </template>
