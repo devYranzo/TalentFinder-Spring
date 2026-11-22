@@ -15,35 +15,29 @@ const emit = defineEmits(['home']);
 </script>
 
 <template>
-  <nav aria-label="breadcrumb" class="mb-4">
+  <nav aria-label="breadcrumb" class="mb-1 fs-5">
     <ol class="breadcrumb mb-0">
-      <li
-          class="breadcrumb-item"
-          :class="{ active: folderId === null }"
-      >
-        <button
-            v-if="folderId !== null"
-            class="btn btn-link p-0 text-decoration-none"
-            type="button"
-            @click="emit('home')"
+
+      <li class="breadcrumb-item">
+        <a
+            href="#"
+            class="text-decoration-none text-white"
+            @click.prevent="emit('home')"
         >
           <i class="bi bi-house-door me-1"></i>
           Home
-        </button>
-
-        <span v-else>
-          <i class="bi bi-house-door me-1"></i>
-          Home
-        </span>
+        </a>
       </li>
 
       <li
           v-if="folderId !== null"
-          aria-current="page"
           class="breadcrumb-item active"
+          aria-current="page"
       >
+        <i class="bi bi-folder-fill me-1"></i>
         {{ folderName }}
       </li>
+
     </ol>
   </nav>
 </template>

@@ -4,6 +4,10 @@ defineProps({
   folders: {
     type: Array,
     default: () => []
+  },
+  hasSearch: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -45,6 +49,19 @@ const emit = defineEmits([
       </div>
     </div>
 
+    <!-- SIN RESULTADOS -->
+    <div
+        v-else-if="hasSearch"
+        class="text-center text-secondary py-4"
+    >
+      <i class="bi bi-folder-x display-5"></i>
+
+      <p class="small mb-0 mt-2">
+        No se encontraron carpetas.
+      </p>
+    </div>
+
+    <!-- SIN CARPETAS -->
     <div
         v-else
         class="text-center text-secondary py-5"

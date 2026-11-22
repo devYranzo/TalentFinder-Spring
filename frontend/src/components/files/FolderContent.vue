@@ -1,4 +1,3 @@
-
 <script setup>
 import DocumentGrid from './DocumentGrid.vue';
 
@@ -10,6 +9,10 @@ defineProps({
   documents: {
     type: Array,
     default: () => []
+  },
+  hasSearch: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -52,6 +55,22 @@ const emit = defineEmits([
         :documents="documents"
         @open="emit('open-document', $event)"
     />
+
+    <!-- SIN RESULTADOS DE BÚSQUEDA -->
+    <div
+        v-else-if="hasSearch"
+        class="text-center text-secondary py-5"
+    >
+      <i class="bi bi-search display-4"></i>
+
+      <h3 class="h6 fw-bold mt-3">
+        No se encontraron documentos
+      </h3>
+
+      <p class="small">
+        Prueba con otro nombre o término de búsqueda.
+      </p>
+    </div>
 
     <!-- CARPETA VACÍA -->
     <div

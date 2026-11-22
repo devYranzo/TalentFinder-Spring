@@ -1,7 +1,7 @@
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue';
-import { useFileManager } from '@/composables/useFiles';
+import { ref, computed, onMounted } from 'vue';
+import { useFileManager } from '@/composables/useFiles.ts';
 
 import FilesToolbar from '@/components/files/FilesToolbar.vue';
 import FilesBreadcrumb from '@/components/files/FilesBreadcrumb.vue';
@@ -27,180 +27,168 @@ const {
   openPDF
 } = useFileManager();
 
-// Navegación
-// null = Home
+// Estado de navegación
 const activeFolderId = ref(null);
 
-// Modales
-const showUploadModal = ref(false);
+// Estado del buscador y ordenación
+const searchTerm = ref('');
+const sortOrder = ref('asc');
+
+// Estado de modales
 const showCreateFolderModal = ref(false);
+const showUploadModal = ref(false);
 
-// Formulario de creación de carpetas
-const newFolderName = ref('');
-
-// Mensajes
-const statusMessage = ref('');
-const statusType = ref('success');
-let statusTimeout = null;
-
-// Nombre de la carpeta actual
-const activeFolderName = () => {
-  if (activeFolderId.value === null) {
-    return 'Home';
-  }
-
-  return folderList.value.find(
-      folder => folder.id === activeFolderId.value
-  )?.name || 'Carpeta';
+// Normaliza texto para ignorar mayúsculas y acentos
+const normalizeText = (value) => {
+  return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('es')
+      .trim();
 };
 
-// Documentos de la carpeta actual
-const displayedDocuments = () => {
+const hasSearch = computed(() => {
+  return normalizeText(searchTerm.value).length > 0;
+});
+
+// Filtrado y ordenación de carpetas
+const filteredFolders = computed(() => {
+  const search = normalizeText(searchTerm.value);
+
+  const folders = [...(folderList.value ?? [])];
+
+  const filtered = folders.filter(folder => {
+    return normalizeText(folder.name).includes(search);
+  });
+
+  return filtered.sort((a, b) => {
+    const comparison = String(a.name ?? '').localeCompare(
+        String(b.name ?? ''),
+        'es',
+        { sensitivity: 'base' }
+    );
+
+    return sortOrder.value === 'asc'
+        ? comparison
+        : -comparison;
+  });
+});
+
+// Documentos correspondientes a la vista actual
+const currentDocuments = computed(() => {
   if (activeFolderId.value === null) {
-    return generalDocuments.value;
+    return generalDocuments.value ?? [];
   }
 
-  return folderDocuments.value[activeFolderId.value] || [];
-};
+  return folderDocuments.value?.[activeFolderId.value] ?? [];
+});
+
+// Filtrado de documentos
+const filteredDocuments = computed(() => {
+  const search = normalizeText(searchTerm.value);
+
+  return (currentDocuments.value ?? []).filter(document => {
+    return normalizeText(document.filename).includes(search);
+  });
+});
+
+// Nombre de la carpeta abierta
+const activeFolderName = computed(() => {
+  if (
+      activeFolderId.value === null ||
+      activeFolderId.value === undefined
+  ) {
+    return '';
+  }
+
+  const folder = (folderList.value ?? []).find(
+      item => String(item.id) === String(activeFolderId.value)
+  );
+
+  return folder?.name ?? '';
+});
+
+// Mensaje para documentos vacíos
+const documentEmptyMessage = computed(() => {
+  if (hasSearch.value) {
+    return 'No se encontraron documentos.';
+  }
+
+  return activeFolderId.value === null
+      ? 'No hay documentos generales.'
+      : 'Esta carpeta está vacía.';
+});
 
 // Navegación
+// FolderGrid emite directamente el ID, no el objeto completo.
+const openFolder = async (folderId) => {
+  if (folderId === null || folderId === undefined) {
+    return;
+  }
+
+  activeFolderId.value = folderId;
+  searchTerm.value = '';
+
+  await refreshFiles();
+};
+
 const goHome = () => {
   activeFolderId.value = null;
+  searchTerm.value = '';
 };
 
-const openFolder = (folderId) => {
-  activeFolderId.value = folderId;
+const handleRefresh = async () => {
+  await refreshFiles();
 };
 
-// Notificaciones
-const showStatus = (message, type = 'success') => {
-  statusMessage.value = message;
-  statusType.value = type;
-
-  clearTimeout(statusTimeout);
-
-  statusTimeout = setTimeout(() => {
-    statusMessage.value = '';
-  }, 4000);
-};
-
-// Modal de creación de carpetas
+// Apertura de modales
 const openCreateFolderModal = () => {
-  newFolderName.value = '';
   showCreateFolderModal.value = true;
 };
 
 const closeCreateFolderModal = () => {
-  if (isCreatingFolder.value) return;
-
   showCreateFolderModal.value = false;
-  newFolderName.value = '';
 };
 
-const handleCreateFolder = async () => {
-  const folderName = newFolderName.value.trim();
-
-  if (!folderName) {
-    showStatus('Introduce un nombre para la carpeta.', 'danger');
-    return;
-  }
-
-  try {
-    const result = await createFolder(folderName);
-
-    activeFolderId.value = null;
-    showCreateFolderModal.value = false;
-    newFolderName.value = '';
-
-    showStatus(`Carpeta "${result.name}" creada correctamente.`);
-  } catch (error) {
-    showStatus('No se pudo crear la carpeta.', 'danger');
-  }
-};
-
-// Modal de subida
 const openUploadModal = () => {
-  selectedFile.value = null;
-  selectedFolder.value = activeFolderId.value;
   showUploadModal.value = true;
 };
 
 const closeUploadModal = () => {
-  if (isUploading.value) return;
-
   showUploadModal.value = false;
-  resetUploadForm();
 };
 
-const resetUploadForm = () => {
-  selectedFile.value = null;
-  selectedFolder.value = activeFolderId.value;
+// Creación de carpeta
+const handleCreateFolder = async (name) => {
+  await createFolder(name);
+  showCreateFolderModal.value = false;
+  await refreshFiles();
 };
 
-// Actualizar archivo seleccionado
-const updateSelectedFile = (file) => {
-  selectedFile.value = file;
-};
-
-// Actualizar carpeta de destino
-const updateSelectedFolder = (folderId) => {
-  selectedFolder.value = folderId;
-};
-
-// Subir documento
-const handleUploadFile = async () => {
+// Subida de documentos
+const handleUpload = async () => {
   if (!selectedFile.value) {
-    showStatus('Selecciona un archivo PDF.', 'danger');
     return;
   }
 
-  const filename = selectedFile.value.name;
+  const folderId = activeFolderId.value;
 
-  try {
-    await uploadFile(
-        selectedFile.value,
-        selectedFolder.value
-    );
+  await uploadFile(selectedFile.value, folderId);
 
-    showUploadModal.value = false;
-    resetUploadForm();
+  selectedFile.value = null;
+  selectedFolder.value = null;
+  showUploadModal.value = false;
 
-    showStatus(`Archivo "${filename}" subido correctamente.`);
-  } catch (error) {
-    showStatus('No se pudo subir el documento.', 'danger');
-  }
+  await refreshFiles();
 };
 
-// Visualizar documento
-const handleOpenPDF = async (document) => {
-  try {
-    await openPDF(document);
-  } catch (error) {
-    showStatus('No se pudo abrir el documento.', 'danger');
-  }
+// Clic en documento
+const handleOpenDocument = (document) => {
+  openPDF(document);
 };
 
-// Actualizar explorador
-const handleRefresh = async () => {
-  try {
-    await refreshFiles();
-    showStatus('Explorador actualizado correctamente.');
-  } catch (error) {
-    showStatus('Error al actualizar los documentos.', 'danger');
-  }
-};
-
-// Inicialización
-onMounted(async () => {
-  try {
-    await refreshFiles();
-  } catch (error) {
-    showStatus('Error al cargar el explorador.', 'danger');
-  }
-});
-
-onUnmounted(() => {
-  clearTimeout(statusTimeout);
+onMounted(() => {
+  refreshFiles();
 });
 </script>
 
@@ -214,134 +202,97 @@ onUnmounted(() => {
           <i class="bi bi-folder2-open me-2"></i>
           Gestión de documentos
         </h1>
-
         <p class="text-secondary small mb-0">
           Organiza y consulta los currículums de tus candidatos.
         </p>
       </div>
     </div>
 
-    <!-- MENSAJES -->
-    <div
-        v-if="statusMessage"
-        :class="statusType === 'success' ? 'alert-success' : 'alert-danger'"
-        class="alert alert-dismissible fade show"
-        role="alert"
-    >
-      <i
-          :class="statusType === 'success'
-          ? 'bi bi-check-circle me-2'
-          : 'bi bi-exclamation-circle me-2'"
-      ></i>
-
-      {{ statusMessage }}
-
-      <button
-          aria-label="Cerrar"
-          class="btn-close"
-          type="button"
-          @click="statusMessage = ''"
-      ></button>
-    </div>
-
-    <!-- ACCIONES -->
     <FilesToolbar
         :is-loading="isLoading"
         :show-create-button="activeFolderId === null"
+        :search-term="searchTerm"
+        :sort-order="sortOrder"
+        @update:search-term="searchTerm = $event"
+        @update:sort-order="sortOrder = $event"
         @refresh="handleRefresh"
         @create-folder="openCreateFolderModal"
         @upload="openUploadModal"
     />
 
-    <!-- CARGANDO -->
+    <FilesBreadcrumb
+        :folder-id="activeFolderId"
+        :folder-name="activeFolderName"
+        @home="goHome"
+    />
+
     <div
-        v-if="isLoading"
-        class="text-center py-5"
+        class="island island-sm p-2 ps-0 ms-0 flex-grow-1 d-flex flex-column"
     >
-      <div class="spinner-border text-primary"></div>
-
-      <p class="text-secondary mt-3 mb-0">
-        Cargando documentos...
-      </p>
-    </div>
-
-    <!-- EXPLORADOR -->
-    <div
-        v-else
-        class="island island-sm p-3 ms-0 flex-grow-1 d-flex flex-column"
-    >
-
-      <!-- BREADCRUMB -->
-      <FilesBreadcrumb
-          :folder-id="activeFolderId"
-          :folder-name="activeFolderName()"
-          @home="goHome"
-      />
-
-      <!-- HOME -->
+      <!-- Vista principal -->
       <template v-if="activeFolderId === null">
 
-        <!-- EXPLORADOR VACÍO -->
         <EmptyExplorer
-            v-if="folderList.length === 0 && generalDocuments.length === 0"
+            v-if="
+            folderList.length === 0 &&
+            generalDocuments.length === 0 &&
+            !hasSearch
+          "
             @create-folder="openCreateFolderModal"
             @upload="openUploadModal"
         />
 
-        <!-- CONTENIDO HOME -->
         <template v-else>
 
-          <!-- CARPETAS -->
           <FolderGrid
-              :folders="folderList"
+              :folders="filteredFolders"
+              :has-search="hasSearch"
               @open="openFolder"
               @create="openCreateFolderModal"
           />
 
-          <!-- DOCUMENTOS GENERALES -->
           <DocumentGrid
-              :documents="generalDocuments"
-              empty-message="No hay documentos generales."
-              @open="handleOpenPDF"
+              :documents="filteredDocuments"
+              :empty-message="documentEmptyMessage"
+              @open="handleOpenDocument"
           />
 
         </template>
       </template>
 
-      <!-- CONTENIDO DE CARPETA -->
-      <FolderContent
-          v-else
-          :folder-name="activeFolderName()"
-          :documents="displayedDocuments()"
-          @upload="openUploadModal"
-          @open-document="handleOpenPDF"
-      />
+      <!-- Contenido de carpeta -->
+      <template v-else>
 
+        <FolderContent
+            :folder-name="activeFolderName"
+            :documents="filteredDocuments"
+            :has-search="hasSearch"
+            @upload="openUploadModal"
+            @open-document="handleOpenDocument"
+        />
+
+      </template>
     </div>
 
-    <!-- MODAL CREAR CARPETA -->
+    <!-- Modal crear carpeta -->
     <CreateFolderModal
-        :show="showCreateFolderModal"
-        :folder-name="newFolderName"
+        v-if="showCreateFolderModal"
         :is-creating="isCreatingFolder"
-        @update:folder-name="newFolderName = $event"
         @close="closeCreateFolderModal"
-        @submit="handleCreateFolder"
+        @create="handleCreateFolder"
     />
 
-    <!-- MODAL SUBIR DOCUMENTO -->
+    <!-- Modal subir documento -->
     <UploadDocumentModal
-        :show="showUploadModal"
-        :folder-list="folderList"
+        v-if="showUploadModal"
+        :folders="folderList"
         :selected-file="selectedFile"
         :selected-folder="selectedFolder"
         :is-uploading="isUploading"
-        :is-creating-folder="isCreatingFolder"
-        @update:selected-file="updateSelectedFile"
-        @update:selected-folder="updateSelectedFolder"
-        @invalid-file="showStatus($event, 'danger')"
         @close="closeUploadModal"
-        @submit="handleUploadFile"
+        @update:selected-file="selectedFile = $event"
+        @update:selected-folder="selectedFolder = $event"
+        @upload="handleUpload"
     />
 
   </div>

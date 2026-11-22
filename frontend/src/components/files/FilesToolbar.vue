@@ -8,50 +8,105 @@ defineProps({
   showCreateButton: {
     type: Boolean,
     default: true
+  },
+  searchTerm: {
+    type: String,
+    default: ''
+  },
+  sortOrder: {
+    type: String,
+    default: 'asc'
   }
 });
 
 const emit = defineEmits([
   'refresh',
   'create-folder',
-  'upload'
+  'upload',
+  'update:search-term',
+  'update:sort-order'
 ]);
+
+const updateSearch = (event) => {
+  emit('update:search-term', event.target.value);
+};
+
+const clearSearch = () => {
+  emit('update:search-term', '');
+};
+
+const updateSort = (event) => {
+  emit('update:sort-order', event.target.value);
+};
 </script>
 
 <template>
-  <div class="d-flex gap-2 mb-3">
-    <button
-        :disabled="isLoading"
-        class="btn btn-outline-secondary"
-        title="Actualizar"
-        type="button"
-        @click="emit('refresh')"
-    >
-      <span
-          v-if="isLoading"
-          class="spinner-border spinner-border-sm"
-      ></span>
+  <div class="row align-items-center g-2 mb-4 flex-nowrap">
 
-      <i v-else class="bi bi-arrow-clockwise"></i>
-    </button>
+    <!-- Buscador -->
+    <div class="col-3">
+      <div class="input-group">
+        <span class="input-group-text glass">
+          <i class="bi bi-search"></i>
+        </span>
 
-    <button
-        v-if="showCreateButton"
-        class="btn btn-outline-primary"
-        type="button"
-        @click="emit('create-folder')"
-    >
-      <i class="bi bi-folder-plus me-1"></i>
-      Nueva carpeta
-    </button>
+        <input
+            type="search"
+            class="form-control glass p-2"
+            :value="searchTerm"
+            placeholder="Buscar..."
+            aria-label="Buscar carpetas y documentos"
+            @input="updateSearch"
+        />
 
-    <button
-        class="btn btn-primary"
-        type="button"
-        @click="emit('upload')"
-    >
-      <i class="bi bi-cloud-arrow-up me-1"></i>
-      Subir archivo
-    </button>
+        <button
+            v-if="searchTerm"
+            class="btn btn-outline-secondary"
+            type="button"
+            aria-label="Limpiar búsqueda"
+            @click="clearSearch"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Ordenación -->
+    <div v-if="showCreateButton" class="col-auto">
+      <select
+          class="form-select"
+          :value="sortOrder"
+          aria-label="Ordenar carpetas"
+          @change="updateSort"
+      >
+        <option value="asc">Nombre A-Z</option>
+        <option value="desc">Nombre Z-A</option>
+      </select>
+    </div>
+
+    <!-- Nueva carpeta -->
+    <div v-if="showCreateButton" class="col-auto">
+      <button
+          class="btn btn-outline-primary text-nowrap"
+          type="button"
+          @click="emit('create-folder')"
+      >
+        <i class="bi bi-folder-plus me-1"></i>
+        Nueva carpeta
+      </button>
+    </div>
+
+    <!-- Subir archivo -->
+    <div class="col-auto">
+      <button
+          class="btn btn-primary text-nowrap"
+          type="button"
+          @click="emit('upload')"
+      >
+        <i class="bi bi-upload me-1"></i>
+        Subir archivo
+      </button>
+    </div>
+
   </div>
 </template>
