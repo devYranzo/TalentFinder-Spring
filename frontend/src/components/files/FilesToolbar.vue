@@ -52,7 +52,7 @@ const updateSort = (event) => {
 
         <input
             type="search"
-            class="form-control glass p-2"
+            class="form-control glass p-1"
             :value="searchTerm"
             placeholder="Buscar..."
             aria-label="Buscar carpetas y documentos"
@@ -72,11 +72,11 @@ const updateSort = (event) => {
     </div>
 
     <!-- Ordenación -->
-    <div v-if="showCreateButton" class="col-auto">
+    <div class="col-auto">
       <select
-          class="form-select"
+          class="form-select glass"
           :value="sortOrder"
-          aria-label="Ordenar carpetas"
+          aria-label="Ordenar"
           @change="updateSort"
       >
         <option value="asc">Nombre A-Z</option>
@@ -84,27 +84,27 @@ const updateSort = (event) => {
       </select>
     </div>
 
-    <!-- Nueva carpeta -->
-    <div v-if="showCreateButton" class="col-auto">
-      <button
-          class="btn btn-outline-primary text-nowrap"
-          type="button"
-          @click="emit('create-folder')"
-      >
-        <i class="bi bi-folder-plus me-1"></i>
-        Nueva carpeta
-      </button>
-    </div>
-
     <!-- Subir archivo -->
     <div class="col-auto">
       <button
-          class="btn btn-primary text-nowrap"
+          class="btn glass text-nowrap"
           type="button"
           @click="emit('upload')"
       >
         <i class="bi bi-upload me-1"></i>
         Subir archivo
+      </button>
+    </div>
+
+    <!-- Nueva carpeta -->
+    <div v-if="showCreateButton" class="col-auto">
+      <button
+          class="btn glass text-nowrap"
+          type="button"
+          @click="emit('create-folder')"
+      >
+        <i class="bi bi-folder-plus me-1"></i>
+        Nueva carpeta
       </button>
     </div>
 

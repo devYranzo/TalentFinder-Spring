@@ -37,6 +37,7 @@ const sortOrder = ref('asc');
 // Estado de modales
 const showCreateFolderModal = ref(false);
 const showUploadModal = ref(false);
+const folderName = ref('');
 
 // Normaliza texto para ignorar mayúsculas y acentos
 const normalizeText = (value) => {
@@ -83,21 +84,30 @@ const currentDocuments = computed(() => {
   return folderDocuments.value?.[activeFolderId.value] ?? [];
 });
 
-// Filtrado de documentos
+// Filtrado y ordenación de documentos
 const filteredDocuments = computed(() => {
   const search = normalizeText(searchTerm.value);
 
-  return (currentDocuments.value ?? []).filter(document => {
+  const filtered = (currentDocuments.value ?? []).filter(document => {
     return normalizeText(document.filename).includes(search);
+  });
+
+  return filtered.sort((a, b) => {
+    const comparison = String(a.filename ?? '').localeCompare(
+        String(b.filename ?? ''),
+        'es',
+        { sensitivity: 'base' }
+    );
+
+    return sortOrder.value === 'asc'
+        ? comparison
+        : -comparison;
   });
 });
 
 // Nombre de la carpeta abierta
 const activeFolderName = computed(() => {
-  if (
-      activeFolderId.value === null ||
-      activeFolderId.value === undefined
-  ) {
+  if (activeFolderId.value === null || activeFolderId.value === undefined) {
     return '';
   }
 
@@ -120,7 +130,6 @@ const documentEmptyMessage = computed(() => {
 });
 
 // Navegación
-// FolderGrid emite directamente el ID, no el objeto completo.
 const openFolder = async (folderId) => {
   if (folderId === null || folderId === undefined) {
     return;
@@ -141,8 +150,9 @@ const handleRefresh = async () => {
   await refreshFiles();
 };
 
-// Apertura de modales
+// Apertura y cierre de modales
 const openCreateFolderModal = () => {
+  folderName.value = '';
   showCreateFolderModal.value = true;
 };
 
@@ -151,6 +161,7 @@ const closeCreateFolderModal = () => {
 };
 
 const openUploadModal = () => {
+  selectedFolder.value = activeFolderId.value;
   showUploadModal.value = true;
 };
 
@@ -159,9 +170,16 @@ const closeUploadModal = () => {
 };
 
 // Creación de carpeta
-const handleCreateFolder = async (name) => {
-  await createFolder(name);
+const handleCreateFolder = async () => {
+  if (!folderName.value.trim()) {
+    return;
+  }
+
+  await createFolder(folderName.value);
+
+  folderName.value = '';
   showCreateFolderModal.value = false;
+
   await refreshFiles();
 };
 
@@ -171,9 +189,10 @@ const handleUpload = async () => {
     return;
   }
 
-  const folderId = activeFolderId.value;
-
-  await uploadFile(selectedFile.value, folderId);
+  await uploadFile(
+      selectedFile.value,
+      selectedFolder.value
+  );
 
   selectedFile.value = null;
   selectedFolder.value = null;
@@ -276,23 +295,26 @@ onMounted(() => {
 
     <!-- Modal crear carpeta -->
     <CreateFolderModal
-        v-if="showCreateFolderModal"
+        :show="showCreateFolderModal"
+        :folder-name="folderName"
         :is-creating="isCreatingFolder"
+        @update:folder-name="folderName = $event"
         @close="closeCreateFolderModal"
-        @create="handleCreateFolder"
+        @submit="handleCreateFolder"
     />
 
     <!-- Modal subir documento -->
     <UploadDocumentModal
-        v-if="showUploadModal"
-        :folders="folderList"
+        :show="showUploadModal"
+        :folder-list="folderList"
         :selected-file="selectedFile"
         :selected-folder="selectedFolder"
         :is-uploading="isUploading"
+        :is-creating-folder="isCreatingFolder"
         @close="closeUploadModal"
         @update:selected-file="selectedFile = $event"
         @update:selected-folder="selectedFolder = $event"
-        @upload="handleUpload"
+        @submit="handleUpload"
     />
 
   </div>
