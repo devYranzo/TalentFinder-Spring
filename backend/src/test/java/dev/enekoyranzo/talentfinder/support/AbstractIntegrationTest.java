@@ -1,17 +1,21 @@
 package dev.enekoyranzo.talentfinder.support;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Base de todos los tests de integración: aplicación completa contra un PostgreSQL real.
- * El contenedor es único para toda la ejecución (se arranca una vez y se comparte).
+ * Base de todos los tests de integración: aplicación completa, con servidor HTTP real en un
+ * puerto aleatorio, contra un PostgreSQL real. El contenedor es único para toda la ejecución.
  */
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import(TestStorageConfig.class)
 public abstract class AbstractIntegrationTest {
@@ -23,5 +27,27 @@ public abstract class AbstractIntegrationTest {
 
     static {
         POSTGRES.start();
+    }
+
+    @Value("${local.server.port}")
+    protected int port;
+
+    @Autowired
+    protected JdbcTemplate jdbc;
+
+    @Autowired
+    protected InMemoryCvStorage storage;
+
+    @BeforeEach
+    void resetStorage() {
+        storage.reset();
+    }
+
+    protected String baseUrl() {
+        return "http://localhost:" + port;
+    }
+
+    protected TestApp app() {
+        return new TestApp(baseUrl(), jdbc);
     }
 }
