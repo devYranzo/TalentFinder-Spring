@@ -13,7 +13,9 @@ defineProps({
 
 const emit = defineEmits([
   'open',
-  'create'
+  'create',
+  'rename',
+  'delete'
 ]);
 </script>
 
@@ -27,25 +29,68 @@ const emit = defineEmits([
       <div
           v-for="folder in folders"
           :key="folder.id"
-          class="col"
+          class="col folder-grid-col"
       >
-        <button
-            type="button"
-            class="card h-100 w-100 glass text-start"
-            :aria-label="'Abrir carpeta ' + folder.name"
-            title="Haz doble clic para abrir"
-            @click.stop
-            @dblclick="emit('open', folder.id)"
-            @keydown.enter="emit('open', folder.id)"
-        >
-          <div class="card-body d-flex align-items-center">
-            <i class="bi bi-folder-fill text-warning"></i>
+        <div class="card h-100 w-100 glass overflow-visible">
 
-            <span class="fw-semibold ms-2 text-truncate">
-              {{ folder.name }}
-            </span>
+          <div class="card-body d-flex align-items-center gap-2 p-2">
+
+            <!-- ABRIR CARPETA -->
+            <button
+                type="button"
+                class="btn bg-transparent border-0 shadow-none text-start d-flex align-items-center flex-grow-1 overflow-hidden p-1"
+                :aria-label="'Abrir carpeta ' + folder.name"
+                title="Haz doble clic para abrir"
+                @dblclick="emit('open', folder.id)"
+                @keydown.enter="emit('open', folder.id)"
+            >
+              <i class="bi bi-folder-fill text-warning fs-5"></i>
+
+              <span class="fw-semibold ms-2 text-truncate">
+                {{ folder.name }}
+              </span>
+            </button>
+
+            <!-- MENÚ DE OPCIONES -->
+            <div class="dropdown dropend flex-shrink-0">
+              <button
+                  type="button"
+                  class="btn btn-sm shadow-none"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  :aria-label="'Opciones de ' + folder.name"
+                  @click.stop
+              >
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li>
+                  <button
+                      class="dropdown-item"
+                      type="button"
+                      @click="emit('rename', folder)"
+                  >
+                    <i class="bi bi-pencil me-2"></i>
+                    Renombrar
+                  </button>
+                </li>
+
+                <li>
+                  <button
+                      class="dropdown-item text-danger"
+                      type="button"
+                      @click="emit('delete', folder)"
+                  >
+                    <i class="bi bi-trash me-2"></i>
+                    Eliminar
+                  </button>
+                </li>
+              </ul>
+            </div>
+
           </div>
-        </button>
+        </div>
       </div>
     </div>
 
@@ -88,3 +133,14 @@ const emit = defineEmits([
 
   </section>
 </template>
+
+<style scoped>
+.folder-grid-col:has(.dropdown-menu.show) {
+  position: relative;
+  z-index: 2;
+}
+
+.dropdown-menu {
+  z-index: 1080;
+}
+</style>

@@ -11,7 +11,7 @@ defineProps({
   }
 });
 
-const emit = defineEmits(['open']);
+const emit = defineEmits(['open', 'move', 'delete']);
 </script>
 
 <template>
@@ -24,9 +24,9 @@ const emit = defineEmits(['open']);
       <div
           v-for="document in documents"
           :key="document.id"
-          class="col"
+          class="col document-grid-col"
       >
-        <div class="card h-100 shadow-sm glass overflow-hidden">
+        <div class="card h-100 shadow-sm glass overflow-visible">
 
           <!-- VISTA PREVIA -->
           <button
@@ -48,10 +48,10 @@ const emit = defineEmits(['open']);
               {{ document.filename }}
             </span>
 
-            <div class="dropdown flex-shrink-0">
+            <div class="dropdown dropend flex-shrink-0">
               <button
                   type="button"
-                  class="btn btn-sm bg-transparent border-0"
+                  class="btn btn-sm shadow-none"
                   data-bs-toggle="dropdown"
                   aria-expanded="false"
                   :aria-label="'Opciones de ' + document.filename"
@@ -60,7 +60,7 @@ const emit = defineEmits(['open']);
                 <i class="bi bi-three-dots-vertical"></i>
               </button>
 
-              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+              <ul class="dropdown-menu shadow-sm">
                 <li>
                   <button
                       class="dropdown-item"
@@ -68,7 +68,29 @@ const emit = defineEmits(['open']);
                       @click="emit('open', document)"
                   >
                     <i class="bi bi-eye me-2"></i>
-                    Ver documento
+                    Visualizar
+                  </button>
+                </li>
+
+                <li>
+                  <button
+                      class="dropdown-item"
+                      type="button"
+                      @click="emit('move', document)"
+                  >
+                    <i class="bi bi-folder-symlink me-2"></i>
+                    Mover
+                  </button>
+                </li>
+
+                <li>
+                  <button
+                      class="dropdown-item text-danger"
+                      type="button"
+                      @click="emit('delete', document)"
+                  >
+                    <i class="bi bi-trash me-2"></i>
+                    Eliminar
                   </button>
                 </li>
               </ul>
@@ -93,3 +115,14 @@ const emit = defineEmits(['open']);
 
   </section>
 </template>
+
+<style scoped>
+.document-grid-col:has(.dropdown-menu.show) {
+  position: relative;
+  z-index: 2;
+}
+
+.dropdown-menu {
+  z-index: 1080;
+}
+</style>

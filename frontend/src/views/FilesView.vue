@@ -9,8 +9,13 @@ import FolderGrid from '@/components/files/FolderGrid.vue';
 import DocumentGrid from '@/components/files/DocumentGrid.vue';
 import EmptyExplorer from '@/components/files/EmptyExplorer.vue';
 import FolderContent from '@/components/files/FolderContent.vue';
+
 import CreateFolderModal from '@/components/files/CreateFolderModal.vue';
 import UploadDocumentModal from '@/components/files/UploadDocumentModal.vue';
+import MoveDocumentModal from '@/components/files/MoveDocumentModal.vue';
+import DeleteDocumentModal from '@/components/files/DeleteDocumentModal.vue';
+import RenameFolderModal from '@/components/files/RenameFolderModal.vue';
+import DeleteFolderModal from '@/components/files/DeleteFolderModal.vue';
 
 const {
   folderList,
@@ -24,7 +29,11 @@ const {
   refreshFiles,
   uploadFile,
   createFolder,
-  openPDF
+  openPDF,
+  moveFile,
+  deleteFile,
+  renameFolder,
+  deleteFolder
 } = useFileManager();
 
 // Estado de navegación
@@ -37,7 +46,26 @@ const sortOrder = ref('asc');
 // Estado de modales
 const showCreateFolderModal = ref(false);
 const showUploadModal = ref(false);
+const showMoveModal = ref(false);
+const showDeleteModal = ref(false);
+const showRenameFolderModal = ref(false);
+const showDeleteFolderModal = ref(false);
+
+// Datos de formularios
 const folderName = ref('');
+const renameFolderName = ref('');
+
+// Elementos seleccionados
+const movingDocument = ref(null);
+const deletingDocument = ref(null);
+const renamingFolder = ref(null);
+const deletingFolder = ref(null);
+
+// Estados de operaciones
+const isMoving = ref(false);
+const isDeleting = ref(false);
+const isRenamingFolder = ref(false);
+const isDeletingFolder = ref(false);
 
 // Normaliza texto para ignorar mayúsculas y acentos
 const normalizeText = (value) => {
@@ -150,7 +178,7 @@ const handleRefresh = async () => {
   await refreshFiles();
 };
 
-// Apertura y cierre de modales
+// Crear carpeta
 const openCreateFolderModal = () => {
   folderName.value = '';
   showCreateFolderModal.value = true;
@@ -160,16 +188,6 @@ const closeCreateFolderModal = () => {
   showCreateFolderModal.value = false;
 };
 
-const openUploadModal = () => {
-  selectedFolder.value = activeFolderId.value;
-  showUploadModal.value = true;
-};
-
-const closeUploadModal = () => {
-  showUploadModal.value = false;
-};
-
-// Creación de carpeta
 const handleCreateFolder = async () => {
   if (!folderName.value.trim()) {
     return;
@@ -179,11 +197,18 @@ const handleCreateFolder = async () => {
 
   folderName.value = '';
   showCreateFolderModal.value = false;
-
-  await refreshFiles();
 };
 
-// Subida de documentos
+// Subir documento
+const openUploadModal = () => {
+  selectedFolder.value = activeFolderId.value;
+  showUploadModal.value = true;
+};
+
+const closeUploadModal = () => {
+  showUploadModal.value = false;
+};
+
 const handleUpload = async () => {
   if (!selectedFile.value) {
     return;
@@ -197,13 +222,160 @@ const handleUpload = async () => {
   selectedFile.value = null;
   selectedFolder.value = null;
   showUploadModal.value = false;
-
-  await refreshFiles();
 };
 
-// Clic en documento
+// Abrir documento
 const handleOpenDocument = (document) => {
   openPDF(document);
+};
+
+// Mover documento
+const openMoveModal = (document) => {
+  movingDocument.value = document;
+  showMoveModal.value = true;
+};
+
+const closeMoveModal = () => {
+  if (isMoving.value) {
+    return;
+  }
+
+  showMoveModal.value = false;
+  movingDocument.value = null;
+};
+
+const handleMoveDocument = async (folderId) => {
+  if (!movingDocument.value || isMoving.value) {
+    return;
+  }
+
+  isMoving.value = true;
+
+  try {
+    await moveFile(
+        movingDocument.value.id,
+        folderId
+    );
+
+    showMoveModal.value = false;
+    movingDocument.value = null;
+  } catch (error) {
+    console.error('Error al mover el documento:', error);
+  } finally {
+    isMoving.value = false;
+  }
+};
+
+// Eliminar documento
+const openDeleteModal = (document) => {
+  deletingDocument.value = document;
+  showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+  if (isDeleting.value) {
+    return;
+  }
+
+  showDeleteModal.value = false;
+  deletingDocument.value = null;
+};
+
+const handleDeleteDocument = async () => {
+  if (!deletingDocument.value || isDeleting.value) {
+    return;
+  }
+
+  isDeleting.value = true;
+
+  try {
+    await deleteFile(deletingDocument.value.id);
+
+    showDeleteModal.value = false;
+    deletingDocument.value = null;
+  } catch (error) {
+    console.error('Error al eliminar el documento:', error);
+  } finally {
+    isDeleting.value = false;
+  }
+};
+
+// Renombrar carpeta
+const openRenameFolderModal = (folder) => {
+  renamingFolder.value = folder;
+  renameFolderName.value = folder.name;
+  showRenameFolderModal.value = true;
+};
+
+const closeRenameFolderModal = () => {
+  if (isRenamingFolder.value) {
+    return;
+  }
+
+  showRenameFolderModal.value = false;
+  renamingFolder.value = null;
+  renameFolderName.value = '';
+};
+
+const handleRenameFolder = async () => {
+  if (
+      !renamingFolder.value ||
+      !renameFolderName.value.trim() ||
+      isRenamingFolder.value
+  ) {
+    return;
+  }
+
+  isRenamingFolder.value = true;
+
+  try {
+    await renameFolder(
+        renamingFolder.value.id,
+        renameFolderName.value.trim()
+    );
+
+    showRenameFolderModal.value = false;
+    renamingFolder.value = null;
+    renameFolderName.value = '';
+  } catch (error) {
+    console.error('Error al renombrar la carpeta:', error);
+  } finally {
+    isRenamingFolder.value = false;
+  }
+};
+
+// Eliminar carpeta
+const openDeleteFolderModal = (folder) => {
+  deletingFolder.value = folder;
+  showDeleteFolderModal.value = true;
+};
+
+const closeDeleteFolderModal = () => {
+  if (isDeletingFolder.value) {
+    return;
+  }
+
+  showDeleteFolderModal.value = false;
+  deletingFolder.value = null;
+};
+
+const handleDeleteFolder = async () => {
+  if (!deletingFolder.value || isDeletingFolder.value) {
+    return;
+  }
+
+  isDeletingFolder.value = true;
+
+  try {
+    await deleteFolder(deletingFolder.value.id);
+
+    showDeleteFolderModal.value = false;
+    deletingFolder.value = null;
+  } catch (error) {
+    console.error('Error al eliminar la carpeta:', error);
+  } finally {
+    isDeletingFolder.value = false;
+  }
 };
 
 onMounted(() => {
@@ -248,7 +420,7 @@ onMounted(() => {
     <div
         class="island island-sm p-2 ps-0 ms-0 flex-grow-1 d-flex flex-column"
     >
-      <!-- Vista principal -->
+      <!-- VISTA PRINCIPAL -->
       <template v-if="activeFolderId === null">
 
         <EmptyExplorer
@@ -268,18 +440,22 @@ onMounted(() => {
               :has-search="hasSearch"
               @open="openFolder"
               @create="openCreateFolderModal"
+              @rename="openRenameFolderModal"
+              @delete="openDeleteFolderModal"
           />
 
           <DocumentGrid
               :documents="filteredDocuments"
               :empty-message="documentEmptyMessage"
               @open="handleOpenDocument"
+              @move="openMoveModal"
+              @delete="openDeleteModal"
           />
 
         </template>
       </template>
 
-      <!-- Contenido de carpeta -->
+      <!-- CONTENIDO DE CARPETA -->
       <template v-else>
 
         <FolderContent
@@ -288,12 +464,14 @@ onMounted(() => {
             :has-search="hasSearch"
             @upload="openUploadModal"
             @open-document="handleOpenDocument"
+            @move-document="openMoveModal"
+            @delete-document="openDeleteModal"
         />
 
       </template>
     </div>
 
-    <!-- Modal crear carpeta -->
+    <!-- MODAL CREAR CARPETA -->
     <CreateFolderModal
         :show="showCreateFolderModal"
         :folder-name="folderName"
@@ -303,7 +481,7 @@ onMounted(() => {
         @submit="handleCreateFolder"
     />
 
-    <!-- Modal subir documento -->
+    <!-- MODAL SUBIR DOCUMENTO -->
     <UploadDocumentModal
         :show="showUploadModal"
         :folder-list="folderList"
@@ -315,6 +493,45 @@ onMounted(() => {
         @update:selected-file="selectedFile = $event"
         @update:selected-folder="selectedFolder = $event"
         @submit="handleUpload"
+    />
+
+    <!-- MODAL MOVER DOCUMENTO -->
+    <MoveDocumentModal
+        :show="showMoveModal"
+        :document="movingDocument"
+        :folders="folderList"
+        :current-folder-id="movingDocument?.folderId ?? null"
+        :is-moving="isMoving"
+        @close="closeMoveModal"
+        @submit="handleMoveDocument"
+    />
+
+    <!-- MODAL ELIMINAR DOCUMENTO -->
+    <DeleteDocumentModal
+        :show="showDeleteModal"
+        :document="deletingDocument"
+        :is-deleting="isDeleting"
+        @close="closeDeleteModal"
+        @confirm="handleDeleteDocument"
+    />
+
+    <!-- MODAL RENOMBRAR CARPETA -->
+    <RenameFolderModal
+        :show="showRenameFolderModal"
+        :folder-name="renameFolderName"
+        :is-renaming="isRenamingFolder"
+        @update:folder-name="renameFolderName = $event"
+        @close="closeRenameFolderModal"
+        @submit="handleRenameFolder"
+    />
+
+    <!-- MODAL ELIMINAR CARPETA -->
+    <DeleteFolderModal
+        :show="showDeleteFolderModal"
+        :folder="deletingFolder"
+        :is-deleting="isDeletingFolder"
+        @close="closeDeleteFolderModal"
+        @confirm="handleDeleteFolder"
     />
 
   </div>
