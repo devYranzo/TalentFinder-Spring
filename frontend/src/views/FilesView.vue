@@ -38,6 +38,18 @@ const {
 
 // Estado de navegación
 const activeFolderId = ref(null);
+const lastOpenedFolderId = ref(null);
+
+// Comprueba si existe una última carpeta válida a la que volver
+const canGoForward = computed(() => {
+  if (activeFolderId.value !== null || lastOpenedFolderId.value === null) {
+    return false;
+  }
+
+  return (folderList.value ?? []).some(
+      folder => String(folder.id) === String(lastOpenedFolderId.value)
+  );
+});
 
 // Estado del buscador y ordenación
 const searchTerm = ref('');
@@ -164,6 +176,7 @@ const openFolder = async (folderId) => {
   }
 
   activeFolderId.value = folderId;
+  lastOpenedFolderId.value = folderId;
   searchTerm.value = '';
 
   await refreshFiles();
@@ -172,6 +185,16 @@ const openFolder = async (folderId) => {
 const goHome = () => {
   activeFolderId.value = null;
   searchTerm.value = '';
+};
+
+const goForward = async () => {
+  if (!canGoForward.value) {
+    return;
+  }
+
+  const folderId = lastOpenedFolderId.value;
+
+  await openFolder(folderId);
 };
 
 const handleRefresh = async () => {
@@ -369,6 +392,22 @@ const handleDeleteFolder = async () => {
   try {
     await deleteFolder(deletingFolder.value.id);
 
+    // Si se elimina la última carpeta guardada, se limpia el historial
+    if (
+        String(lastOpenedFolderId.value) ===
+        String(deletingFolder.value.id)
+    ) {
+      lastOpenedFolderId.value = null;
+    }
+
+    // Si se elimina la carpeta abierta, se vuelve a Home
+    if (
+        String(activeFolderId.value) ===
+        String(deletingFolder.value.id)
+    ) {
+      activeFolderId.value = null;
+    }
+
     showDeleteFolderModal.value = false;
     deletingFolder.value = null;
   } catch (error) {
@@ -414,7 +453,9 @@ onMounted(() => {
     <FilesBreadcrumb
         :folder-id="activeFolderId"
         :folder-name="activeFolderName"
+        :can-go-forward="canGoForward"
         @home="goHome"
+        @forward="goForward"
     />
 
     <div
