@@ -18,8 +18,8 @@ const navItems: NavItem[] = [
   {to: '/search', label: 'Buscador', icon: 'bi-search', roles: ALL},
   {to: '/projects', label: 'Proyectos', icon: 'bi-briefcase', roles: ['ADMIN', 'RECRUITER']},
   {to: '/files', label: 'Gestor de CVs', icon: 'bi-folder2-open', roles: ['ADMIN', 'RECRUITER']},
-  {to: '/analytics', label: 'Analítica', icon: 'bi-bar-chart', roles: ALL},
   {to: '/indexing', label: 'Indexación', icon: 'bi-database', roles: ['ADMIN']},
+  {to: '/analytics', label: 'Analítica', icon: 'bi-bar-chart', roles: ['ADMIN']},
   {to: '/users', label: 'Usuarios', icon: 'bi-people', roles: ['ADMIN']},
   {to: '/settings', label: 'Organización', icon: 'bi-building-gear', roles: ['ADMIN']},
 ]
