@@ -1,3 +1,6 @@
 .env
 secrets/
 .idea/*
+
+models/*
+!models/SHA256SUMS

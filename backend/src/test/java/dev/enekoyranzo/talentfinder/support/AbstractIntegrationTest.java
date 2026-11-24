@@ -17,7 +17,7 @@ import org.testcontainers.utility.DockerImageName;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Import(TestStorageConfig.class)
+@Import({TestStorageConfig.class, TestEmbeddingConfig.class})
 public abstract class AbstractIntegrationTest {
 
     // Misma imagen que en desarrollo. asCompatibleSubstituteFor: Testcontainers la trata como PostgreSQL.
