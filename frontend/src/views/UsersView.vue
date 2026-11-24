@@ -1,14 +1,10 @@
-
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import {computed, nextTick, onMounted, ref} from 'vue'
 
-import usersApi, {
-  type User,
-  type UserForm,
-} from '@/api/users'
+import usersApi, {type User, type UserForm,} from '@/api/users'
 
 import UserModal from '@/components/users/UserModal.vue'
-import { useAuthStore } from '@/stores/auth'
+import {useAuthStore} from '@/stores/auth'
 
 const authStore = useAuthStore()
 
@@ -238,19 +234,10 @@ onMounted(loadUsers)
           Gestión de usuarios
         </h3>
 
-        <p class="text-body-secondary mb-0">
+        <p class="text-secondary small mb-0">
           Administra los accesos, permisos y usuarios del sistema.
         </p>
       </div>
-
-      <button
-          type="button"
-          class="btn btn-primary rounded-3 px-4"
-          @click="openCreate"
-      >
-        <i class="bi bi-person-plus-fill me-2"></i>
-        Nuevo usuario
-      </button>
     </div>
 
     <!-- Estadísticas -->
@@ -332,28 +319,38 @@ onMounted(loadUsers)
           </p>
         </div>
 
-        <div class="input-group w-auto">
-          <span class="input-group-text bg-transparent">
+        <div class="d-flex gap-2">
+          <button
+              type="button"
+              class="btn glass rounded-3 px-4"
+              @click="openCreate"
+          >
+            <i class="bi bi-person-plus-fill me-2"></i>
+            Nuevo usuario
+          </button>
+          <div class="input-group w-auto glass rounded-3">
+          <span class="input-group-text bg-transparent border-0">
             <i class="bi bi-search"></i>
           </span>
 
-          <input
-              v-model="searchQuery"
-              type="search"
-              class="form-control bg-transparent"
-              placeholder="Buscar usuario..."
-              aria-label="Buscar usuarios"
-          >
+            <input
+                v-model="searchQuery"
+                type="search"
+                class="form-control bg-transparent border-0"
+                placeholder="Buscar usuario..."
+                aria-label="Buscar usuarios"
+            >
 
-          <button
-              v-if="searchQuery"
-              class="btn btn-outline-secondary"
-              type="button"
-              @click="searchQuery = ''"
-              aria-label="Limpiar búsqueda"
-          >
-            <i class="bi bi-x-lg"></i>
-          </button>
+            <button
+                v-if="searchQuery"
+                class="btn bg-transparent border-0"
+                type="button"
+                @click="searchQuery = ''"
+                aria-label="Limpiar búsqueda"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
         </div>
       </div>
 

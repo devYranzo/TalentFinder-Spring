@@ -428,7 +428,7 @@ onMounted(() => {
     <!-- CABECERA -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
       <div>
-        <h1 class="h4 fw-bold mb-1">
+        <h1 class="h3 fw-bold mb-1">
           <i class="bi bi-folder2-open me-2"></i>
           Gestión de documentos
         </h1>
