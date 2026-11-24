@@ -4,6 +4,7 @@ import {computed, nextTick, onMounted, ref} from 'vue'
 import usersApi, {type User, type UserForm,} from '@/api/users'
 
 import UserModal from '@/components/users/UserModal.vue'
+import UserConfirmModal from "@/components/users/UserConfirmModal.vue";
 import {useAuthStore} from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -20,6 +21,11 @@ const searchQuery = ref('')
 const isEdit = ref(false)
 
 const userModalRef = ref<InstanceType<typeof UserModal> | null>(null)
+const confirmModal = ref<InstanceType<typeof UserConfirmModal> | null>(null)
+
+const pendingAction = ref<'delete' | 'deactivate' | null>(null)
+const selectedUser = ref<User | null>(null)
+const isConfirming = ref(false)
 
 const form = ref<UserForm>({
   id: null,
@@ -221,16 +227,77 @@ async function handleDelete(user: User) {
   }
 }
 
+async function toggleUserStatus(user: User) {
+  if (user.id === authStore.profile?.id) return
+
+  try {
+    const updatedUser = await usersApi.editUser(user.id, {
+      active: !user.active,
+    })
+
+    users.value = users.value.map((item) =>
+        item.id === updatedUser.id ? updatedUser : item,
+    )
+  } catch (error) {
+    console.error('Error al cambiar el estado del usuario:', error)
+  }
+}
+
+function askDeleteUser(user: User) {
+  selectedUser.value = user
+  pendingAction.value = 'delete'
+  confirmModal.value?.show()
+}
+
+function askToggleUserStatus(user: User) {
+  selectedUser.value = user
+  pendingAction.value = user.active ? 'deactivate' : null
+  confirmModal.value?.show()
+}
+
+async function confirmUserAction() {
+  if (!selectedUser.value || isConfirming.value) return
+
+  isConfirming.value = true
+
+  try {
+    if (pendingAction.value === 'delete') {
+      await usersApi.deleteUser(selectedUser.value.id)
+
+      users.value = users.value.filter(
+          (user) => user.id !== selectedUser.value?.id,
+      )
+    } else {
+      const updatedUser = await usersApi.editUser(selectedUser.value.id, {
+        active: !selectedUser.value.active,
+      })
+
+      users.value = users.value.map((user) =>
+          user.id === updatedUser.id ? updatedUser : user,
+      )
+    }
+
+    confirmModal.value?.hide()
+    selectedUser.value = null
+    pendingAction.value = null
+  } catch (error) {
+    console.error('Error al ejecutar la acción:', error)
+  } finally {
+    isConfirming.value = false
+  }
+}
+
 onMounted(loadUsers)
 </script>
 
 <template>
-  <div class="container-fluid py-3">
+  <div class="container-fluid p-3 p-md-4 d-flex flex-column min-vh-100">
 
     <!-- Cabecera -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
       <div>
         <h3 class="fw-bold mb-1">
+          <i class="bi bi-people me-2"></i>
           Gestión de usuarios
         </h3>
 
@@ -486,10 +553,24 @@ onMounted(loadUsers)
 
               <!-- Acciones -->
               <td class="bg-transparent">
-                <div class="d-inline-flex gap-1">
+                <div class="d-inline-flex gap-2">
                   <button
                       type="button"
-                      class="btn btn-sm btn-outline-secondary"
+                      class="btn btn-outline-warning"
+                      :disabled="user.id === authStore.profile?.id"
+                      @click="askToggleUserStatus(user)"
+                  >
+                    <span v-if="user.active" title="Desactivar cuenta">
+                      <i class="bi bi-person-fill-down"></i>
+                    </span>
+                    <span v-else title="Activar cuenta">
+                      <i class="bi bi-person-fill-up"></i>
+                    </span>
+                  </button>
+
+                  <button
+                      type="button"
+                      class="btn btn-outline-light"
                       title="Editar usuario"
                       :aria-label="`Editar usuario ${user.firstName}`"
                       :disabled="isCurrentUser(user.id)"
@@ -500,11 +581,11 @@ onMounted(loadUsers)
 
                   <button
                       type="button"
-                      class="btn btn-sm btn-outline-danger"
+                      class="btn btn-outline-danger"
                       title="Eliminar usuario"
                       :aria-label="`Eliminar usuario ${user.firstName}`"
                       :disabled="isCurrentUser(user.id) || isDeleting === user.id"
-                      @click="handleDelete(user)"
+                      @click="askDeleteUser(user)"
                   >
                       <span
                           v-if="isDeleting === user.id"
@@ -512,10 +593,7 @@ onMounted(loadUsers)
                           role="status"
                       ></span>
 
-                    <i
-                        v-else
-                        class="bi bi-trash3-fill"
-                    ></i>
+                    <i v-else class="bi bi-trash3-fill"></i>
                   </button>
                 </div>
               </td>
@@ -554,6 +632,21 @@ onMounted(loadUsers)
         :is-edit="isEdit"
         :is-saving="isSaving"
         @save="handleSave"
+    />
+
+    <!--  Modal confirmación  -->
+    <UserConfirmModal
+      ref="confirmModal"
+      :title="pendingAction === 'delete'
+      ? 'Eliminar usuario'
+      : 'Cambiar estado de la cuenta'"
+          :message="pendingAction === 'delete'
+      ? `¿Seguro que deseas eliminar a ${selectedUser?.firstName} ${selectedUser?.lastName}? Esta acción no se puede deshacer.`
+      : `¿Seguro que deseas ${selectedUser?.active ? 'desactivar' : 'activar'} la cuenta de ${selectedUser?.firstName} ${selectedUser?.lastName}?`"
+          :confirm-text="pendingAction === 'delete' ? 'Eliminar' : selectedUser?.active ? 'Desactivar' : 'Activar'"
+          :is-danger="pendingAction === 'delete'"
+          :is-loading="isConfirming"
+          @confirm="confirmUserAction"
     />
 
   </div>
