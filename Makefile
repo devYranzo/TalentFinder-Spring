@@ -84,6 +84,10 @@ $(STORAGE_JSON): $(STORAGE_ADMIN_AK) $(STORAGE_ADMIN_SK) $(STORAGE_AK) $(STORAGE
 prepare-secrets: $(ENV_FILE) $(DB_SECRET) $(JWT_SECRET) $(DEV_USER_SECRET) $(STORAGE_JSON)
 	@chmod 700 $(SECRETS_DIR)
 
+# ---------------------------------------------------------------------- modelos
+fetch-models:
+	bash scripts/fetch-models.sh
+
 # ---------------------------------------------------------------------- entorno
 start-dev: prepare-secrets
 	docker compose up -d --wait database storage
@@ -97,7 +101,7 @@ start-dev: prepare-secrets
 	@echo "  Usuarios     admin@talentfinder.test y recruiter@talentfinder.test"
 	@echo "  Contraseña en $(DEV_USER_SECRET)"
 
-run-dev: start-dev
+run-dev: start-dev fetch-models
 	cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
 stop:
