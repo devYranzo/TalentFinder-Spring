@@ -2,6 +2,8 @@ package dev.enekoyranzo.talentfinder.document;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -44,6 +46,27 @@ public class Document {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    // --- Estado de indexado ---
+    // JPA NUNCA escribe estas columnas (insertable=false, updatable=false): solo cambian con las
+    // consultas atómicas de DocumentRepository. Así, guardar el documento (por ejemplo, al moverlo
+    // de carpeta) no puede pisar con un valor antiguo el estado que acaba de poner el indexador.
+    // El valor inicial coincide con el DEFAULT de la base de datos.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "index_status", nullable = false, insertable = false, updatable = false, length = 20)
+    private IndexStatus indexStatus = IndexStatus.PENDING;
+
+    @Column(name = "index_error", insertable = false, updatable = false, length = 40)
+    private String indexError;
+
+    @Column(name = "indexed_at", insertable = false, updatable = false)
+    private Instant indexedAt;
+
+    @Column(name = "index_started_at", insertable = false, updatable = false)
+    private Instant indexStartedAt;
+
+    @Column(name = "index_attempts", nullable = false, insertable = false, updatable = false)
+    private int indexAttempts;
 
     protected Document() {
         // requerido por JPA
@@ -94,6 +117,26 @@ public class Document {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public IndexStatus getIndexStatus() {
+        return indexStatus;
+    }
+
+    public String getIndexError() {
+        return indexError;
+    }
+
+    public Instant getIndexedAt() {
+        return indexedAt;
+    }
+
+    public Instant getIndexStartedAt() {
+        return indexStartedAt;
+    }
+
+    public int getIndexAttempts() {
+        return indexAttempts;
     }
 
     public void setFolderId(Long folderId) {

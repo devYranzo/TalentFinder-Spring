@@ -9,10 +9,13 @@ public record DocumentResponse(
         String filename,
         long sizeBytes,
         Long folderId,
-        Instant createdAt
+        Instant createdAt,
+        String indexStatus,
+        String indexError
 ) {
+    // No expone storageKey ni sha256: son detalles internos.
     public static DocumentResponse from(Document d) {
-        return new DocumentResponse(d.getId(), d.getOriginalFilename(),
-                d.getSizeBytes(), d.getFolderId(), d.getCreatedAt());
+        return new DocumentResponse(d.getId(), d.getOriginalFilename(), d.getSizeBytes(),
+                d.getFolderId(), d.getCreatedAt(), d.getIndexStatus().name(), d.getIndexError());
     }
 }
